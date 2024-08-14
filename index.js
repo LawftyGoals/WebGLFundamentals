@@ -1,13 +1,55 @@
-const canvas = document.querySelector("#c");
+"use strict";
 
-canvas.clientWidth = window.innerWidth;
-canvas.clientHeight = window.innerHeight;
+const vertexShaderSource = `#version 300 es
+//attribute is input (in) to a vertex shader.
+// It will receive data from buffer
+in vec4 a_position;
 
-const gl = canvas.getContext("webgl2");
+void main() {
+  gl_Position = a_position;
+}
+`;
 
-if (!gl) {
-  console.log("nogl for you");
-} else {
+const fragmentShaderSource = `#version 300 es
+
+//fragment shaders have no default precision. highp means high precision
+precision highp float;
+
+//need to declare output for fragment shader
+out vec4 outColor;
+
+void main(){
+    //set output constant reddish purp.
+    outColor = vec4(1,0,0.5, 1);
+}
+`;
+
+const RESIZE_HEIGHT_CONSTANT = 3;
+
+function resizeAndUpdate(canvas) {
+  window.onresize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - RESIZE_HEIGHT_CONSTANT;
+    main();
+  };
+}
+
+function main() {
+  const canvas = document.querySelector("#c");
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - RESIZE_HEIGHT_CONSTANT;
+
+  resizeAndUpdate(canvas, main);
+
+  /** @type {WebGLRenderingContext} */
+  const gl = canvas.getContext("webgl2");
+
+  if (!gl) {
+    console.log("no gl for you");
+    return;
+  }
+
   const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
   const fragmentShader = createShader(
     gl,
@@ -17,10 +59,7 @@ if (!gl) {
 
   const program = createProgram(gl, vertexShader, fragmentShader);
 
-  const positionAttributeLocation = gl.getAttributeLocation(
-    program,
-    "a_position"
-  );
+  const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
 
   const positionBuffer = gl.createBuffer();
 
@@ -42,7 +81,7 @@ if (!gl) {
   const stride = 0;
   const offset = 0;
 
-  gl.vertexAttribPoint(
+  gl.vertexAttribPointer(
     positionAttributeLocation,
     size,
     type,
@@ -50,6 +89,18 @@ if (!gl) {
     stride,
     offset
   );
+
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  gl.useProgram(program);
+  gl.bindVertexArray(vao);
+
+  const primitiveType = gl.TRIANGLES;
+  const count = 3;
+  gl.drawArrays(primitiveType, offset, count);
 }
 
 function createProgram(gl, vertexShader, fragmentShader) {
@@ -78,26 +129,4 @@ function createShader(gl, type, source) {
   gl.deleteShader(shader);
 }
 
-const vertexShaderSource = `#version 300 es
-//attribute is input (in) to a vertex shader.
-// It will receive data from buffer
-in vec4 a_position;
-
-void main() {
-  gl_position = a_position;
-}
-`;
-
-const fragmentShaderSource = `#version 300 es
-
-//fragment shaders have no default precision. highp means high precision
-percision highp float;
-
-//need to declare output for fragment shader
-out vec4 outColor;
-
-void main(){
-    //set output constant reddish purp.
-    outColor = vec4(1,0,0.5, 1);
-}
-`;
+main();
